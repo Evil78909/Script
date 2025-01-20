@@ -1,0 +1,83 @@
+-- This script should be placed in StarterPlayer > StarterPlayerScripts as a LocalScript
+
+-- Create the ScreenGui for the player's GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Create a Frame for organizing the UI elements
+local frame = Instance.new("Frame")
+frame.Parent = screenGui
+frame.Size = UDim2.new(0.5, 0, 0.5, 0)
+frame.Position = UDim2.new(0.25, 0, 0.25, 0)
+frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+
+-- Create a TextLabel inside the frame to ask for input
+local label = Instance.new("TextLabel")
+label.Parent = frame
+label.Size = UDim2.new(1, 0, 0.2, 0)
+label.Position = UDim2.new(0, 0, 0.1, 0)
+label.Text = "Enter a Lua script to execute on the server:"
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextSize = 20
+
+-- Create a TextBox where the player can input Lua scripts
+local textBox = Instance.new("TextBox")
+textBox.Parent = frame
+textBox.Size = UDim2.new(0.8, 0, 0.2, 0)
+textBox.Position = UDim2.new(0.1, 0, 0.35, 0)
+textBox.PlaceholderText = "Enter Lua script here"
+textBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+textBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+textBox.MultiLine = true
+
+-- Create a Submit Button to submit the script
+local submitButton = Instance.new("TextButton")
+submitButton.Parent = frame
+submitButton.Size = UDim2.new(0.5, 0, 0.2, 0)
+submitButton.Position = UDim2.new(0.25, 0, 0.7, 0)
+submitButton.Text = "Submit"
+submitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+submitButton.BackgroundColor3 = Color3.fromRGB(0, 102, 204)
+
+-- RemoteEvent to send scripts to the server (using ReplicatedStorage for communication)
+local runScriptEvent = Instance.new("RemoteEvent")
+runScriptEvent.Name = "RunScript"
+runScriptEvent.Parent = game:GetService("ReplicatedStorage")
+
+-- Function to handle when the Submit button is clicked
+submitButton.MouseButton1Click:Connect(function()
+    local playerInput = textBox.Text
+    if playerInput ~= "" then
+        -- Send the player's script to the server to execute
+        runScriptEvent:FireServer(playerInput)
+        label.Text = "Script sent to server!"
+    else
+        label.Text = "Please enter a valid script."
+    end
+end)
+
+-- Server-side logic for executing scripts
+runScriptEvent.OnServerEvent:Connect(function(player, script)
+    print("Script received from " .. player.Name .. ": " .. script)
+
+    -- Sanity check: Only allow specific players to run server scripts
+    local authorizedPlayers = { "PlayerName1", "PlayerName2" } -- Replace with actual player names
+    if not table.find(authorizedPlayers, player.Name) then
+        warn("Unauthorized script execution attempt by: " .. player.Name)
+        return
+    end
+
+    -- Use `loadstring` to execute the script
+    local func, loadError = loadstring(script)
+
+    if func then
+        local success, runtimeError = pcall(func)
+        if success then
+            print("Script executed successfully.")
+        else
+            warn("Error during script execution: " .. runtimeError)
+        end
+    else
+        warn("Error loading script: " .. loadError)
+    end
+end)
